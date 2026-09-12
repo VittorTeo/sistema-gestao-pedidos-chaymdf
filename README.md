@@ -1,2 +1,4 @@
-# sistema-gestao-pedidos-chaymdf
-Sistema de Gestão de Pedidos para a empresa ChayMDF - Projeto Extensionista UniEVANGÉLICA.
+# Sistema de Gestão de Pedidos - ChayMDF
+Projeto Extensionista da disciplina Programação Básica Aplicada.
+Curso: Análise e Desenvolvimento de Sistemas - UniEVANGÉLICA.
+Aluno: Vittor Hugo Oliveira Teodoro

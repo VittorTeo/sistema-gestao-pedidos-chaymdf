@@ -18,15 +18,15 @@ O **Sistema de Gestão de Pedidos ChayMDF** é uma aplicação web leve e intera
 - **HTML5:** Estruturação semântica da interface.
 - **CSS3:** Estilização moderna, responsiva e profissional.
 - **JavaScript (Vanilla):** Manipulação dinâmica do DOM e lógica de arrastar e soltar (*Drag and Drop*).
-- **Git / GitHub:** Controle de versão e versionamento de código[cite: 1, 2].
+- **Git / GitHub:** Controle de versão e versionamento de código.
 
 ## ⚙️ Como Executar o Projeto
-Por se tratar de uma aplicação web otimizada para os computadores básicos da empresa (sem necessidade de servidores complexos)[cite: 1, 2], sua execução é direta:
+Por se tratar de uma aplicação web otimizada para os computadores básicos da empresa (sem necessidade de servidores complexos), sua execução é direta:
 1. Faça o download ou clone este repositório em sua máquina.
 2. Certifique-se de ter o arquivo `index.html` na pasta principal.
 3. Dê um duplo clique no arquivo `index.html` para abri-lo em qualquer navegador web moderno (Google Chrome, Microsoft Edge, etc.).
 
 ## 👨‍💻 Autoria e Orientação
-- **Estudante / Desenvolvedor:** Vittor Hugo Oliveira Teodoro[cite: 1, 2]
-- **Instituição:** UniEVANGÉLICA[cite: 1, 2]
-- **Docente Responsável:** Profª. Natasha Sophie (`@natasha.sophie`)[cite: 1, 2]
+- **Estudante / Desenvolvedor:** Vittor Hugo Oliveira Teodoro
+- **Instituição:** UniEVANGÉLICA
+- **Docente Responsável:** Profª. Natasha Sophie (`@natasha.sophie`)

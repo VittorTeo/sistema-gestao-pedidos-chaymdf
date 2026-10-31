@@ -1,3 +1,7 @@
 
 firebase-config.js
 .firebase/
+.firebase/
+.DS_Store
+Thumbs.db
+.vscode/

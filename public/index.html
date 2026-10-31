@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Gestão de Pedidos · ChayMDF</title>
+<style>
+  /* =========================================================
+     RESET & TOKENS
+     ========================================================= */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* Paleta principal: azul escuro (marca/estrutura), cinza (neutros), verde (ação/sucesso) */
+    --azul-950: #0d1b2e;
+    --azul-900: #16243b;
+    --azul-800: #1e3a5f;
+    --azul-700: #28527d;
+
+    --cinza-950: #1a1f27;
+    --cinza-800: #384252;
+    --cinza-600: #64748b;
+    --cinza-400: #a0aab8;
+    --cinza-200: #e2e6eb;
+    --cinza-100: #eef1f5;
+    --cinza-50:  #f6f8fa;
+
+    --verde-700: #157347;
+    --verde-600: #1a9c5f;
+    --verde-500: #22b573;
+    --verde-100: #e0f5ea;
+
+    --ambar-600: #c9822b;
+    --ambar-100: #faf0dd;
+
+    --branco: #ffffff;
+    --sombra-card: 0 1px 2px rgba(13, 27, 46, 0.06), 0 2px 8px rgba(13, 27, 46, 0.08);
+    --sombra-modal: 0 20px 50px rgba(10, 18, 30, 0.35);
+
+    --raio-card: 10px;
+    --raio-btn: 8px;
+
+    --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: var(--fonte);
+    background: var(--cinza-100);
+    color: var(--cinza-950);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--azul-700);
+    outline-offset: 2px;
+  }
+
+  /* =========================================================
+     HEADER
+     ========================================================= */
+  .app-header {
+    background: linear-gradient(135deg, var(--azul-950) 0%, var(--azul-900) 55%, var(--azul-800) 100%);
+    color: var(--branco);
+    padding: 20px clamp(16px, 4vw, 40px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 16px rgba(13, 27, 46, 0.25);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .marca-icone {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--verde-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .marca-icone svg { width: 24px; height: 24px; }
+
+  .marca-textos h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .marca-textos p {
+    font-size: 0.8rem;
+    color: var(--cinza-400);
+    margin-top: 2px;
+  }
+
+  .btn-primario {
+    background: var(--verde-600);
+    color: var(--branco);
+    padding: 12px 22px;
+    border-radius: var(--raio-btn);
+    font-weight: 600;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(26, 156, 95, 0.35);
+    transition: background 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+  .btn-primario:hover { background: var(--verde-700); transform: translateY(-1px); }
+  .btn-primario:active { transform: translateY(0); }
+  .btn-primario svg { width: 18px; height: 18px; }
+
+  /* =========================================================
+     BOARD / KANBAN
+     ========================================================= */
+  .board-wrap {
+    padding: clamp(16px, 3vw, 32px);
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(280px, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+
+  .coluna {
+    background: var(--cinza-50);
+    border: 1px solid var(--cinza-200);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 60vh;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .coluna.drag-over {
+    background: var(--verde-100);
+    border-color: var(--verde-500);
+  }
+
+  .coluna-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+    border-bottom: 2px solid var(--cinza-200);
+  }
+
+  .coluna-titulo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .coluna-ponto {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .coluna[data-status="lancamento"] .coluna-ponto { background: var(--azul-700); }
+  .coluna[data-status="andamento"] .coluna-ponto { background: var(--ambar-600); }
+  .coluna[data-status="finalizados"] .coluna-ponto { background: var(--verde-600); }
+
+  .coluna-titulo h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--cinza-950);
+  }
+
+  .coluna-contagem {
+    background: var(--cinza-200);
+    color: var(--cinza-800);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    min-width: 22px;
+    text-align: center;
+  }
+
+  .coluna-lista {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 120px;
+  }
+
+  .coluna-vazia {
+    border: 1.5px dashed var(--cinza-200);
+    border-radius: var(--raio-card);
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--cinza-400);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  /* =========================================================
+     CARTÃO DE PEDIDO
+     ========================================================= */
+  .cartao {
+    background: var(--branco);
+    border: 1px solid var(--cinza-200);
+    border-radius: var(--raio-card);
+    padding: 14px 14px 12px;
+    box-shadow: var(--sombra-card);
+    cursor: grab;
+    transition: box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+    position: relative;
+  }
+  .cartao:hover {
+    box-shadow: 0 6px 18px rgba(13, 27, 46, 0.14);
+    transform: translateY(-2px);
+  }
+  .cartao:active { cursor: grabbing; }
+  .cartao.arrastando { opacity: 0.45; }
+
+  .cartao-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .cartao-nome {
+    font-weight: 700;
+    font-size: 0.94rem;
+    color: var(--azul-950);
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .cartao-remover {
+    color: var(--cinza-400);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .cartao-remover:hover { color: #c0392b; background: #fdecea; }
+
+  .cartao-descricao {
+    font-size: 0.82rem;
+    color: var(--cinza-600);
+    line-height: 1.45;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .cartao-rodape {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge-qtd {
+    background: var(--cinza-100);
+    color: var(--cinza-800);
+    border: 1px solid var(--cinza-200);
+  }
+  .badge-prazo {
+    background: var(--ambar-100);
+    color: #8a5a1c;
+  }
+  .badge svg { width: 12px; height: 12px; }
+
+  .coluna[data-status="finalizados"] .badge-prazo {
+    background: var(--verde-100);
+    color: var(--verde-700);
+  }
+
+  /* =========================================================
+     MODAL
+     ========================================================= */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 20, 33, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  .modal-overlay.aberto {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal {
+    background: var(--branco);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 14px;
+    box-shadow: var(--sombra-modal);
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.18s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay.aberto .modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--cinza-200);
+  }
+  .modal-cabecalho h2 {
+    font-size: 1.05rem;
+    color: var(--azul-950);
+    font-weight: 700;
+  }
+  .modal-fechar {
+    font-size: 1.3rem;
+    color: var(--cinza-400);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .modal-fechar:hover { background: var(--cinza-100); color: var(--cinza-950); }
+
+  .modal-corpo {
+    padding: 22px 24px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .campo label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--cinza-800);
+    margin-bottom: 6px;
+  }
+  .campo .obrigatorio { color: #c0392b; }
+
+  .campo input,
+  .campo textarea {
+    width: 100%;
+    border: 1.5px solid var(--cinza-200);
+    border-radius: var(--raio-btn);
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--cinza-950);
+    background: var(--cinza-50);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .campo input:focus,
+  .campo textarea:focus {
+    border-color: var(--azul-700);
+    background: var(--branco);
+    outline: none;
+  }
+  .campo textarea { resize: vertical; min-height: 72px; line-height: 1.4; }
+
+  .linha-dupla {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .campo-erro {
+    font-size: 0.75rem;
+    color: #c0392b;
+    margin-top: 5px;
+    display: none;
+  }
+  .campo.invalido input,
+  .campo.invalido textarea { border-color: #c0392b; background: #fdf3f2; }
+  .campo.invalido .campo-erro { display: block; }
+
+  .modal-rodape {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 24px 24px;
+  }
+
+  .btn-secundario {
+    background: var(--cinza-100);
+    color: var(--cinza-800);
+    padding: 11px 20px;
+    border-radius: var(--raio-btn);
+    font-weight: 600;
+    font-size: 0.88rem;
+    transition: background 0.15s ease;
+  }
+  .btn-secundario:hover { background: var(--cinza-200); }
+
+  .btn-salvar {
+    background: var(--verde-600);
+    color: var(--branco);
+    padding: 11px 22px;
+    border-radius: var(--raio-btn);
+    font-weight: 600;
+    font-size: 0.88rem;
+    box-shadow: 0 4px 12px rgba(26, 156, 95, 0.3);
+    transition: background 0.15s ease;
+  }
+  .btn-salvar:hover { background: var(--verde-700); }
+
+  /* =========================================================
+     TOAST (feedback de ações)
+     ========================================================= */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--azul-950);
+    color: var(--branco);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 200;
+  }
+  .toast.visivel {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast-ponto {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--verde-500);
+    flex-shrink: 0;
+  }
+
+  /* =========================================================
+     RESPONSIVO
+     ========================================================= */
+  @media (max-width: 880px) {
+    .board { grid-template-columns: 1fr; }
+    .linha-dupla { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- =========================================================
+       HEADER
+       ========================================================= -->
+  <header class="app-header">
+    <div class="marca">
+      <div class="marca-icone">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 4H20V20H4V4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M4 12H20M12 4V20" stroke="white" stroke-width="1.8"/>
+        </svg>
+      </div>
+      <div class="marca-textos">
+        <h1>Sistema de Gestão de Pedidos - ChayMDF</h1>
+        <p>Corte e peças em MDF · painel de produção</p>
+      </div>
+    </div>
+    <button class="btn-primario" id="btnNovaComanda" type="button">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 5V19M5 12H19" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      Nova Comanda
+    </button>
+  </header>
+
+  <!-- =========================================================
+       QUADRO KANBAN
+       ========================================================= -->
+  <main class="board-wrap">
+    <div class="board" id="board">
+
+      <section class="coluna" data-status="lancamento">
+        <div class="coluna-cabecalho">
+          <div class="coluna-titulo">
+            <span class="coluna-ponto"></span>
+            <h2>Lançamento</h2>
+          </div>
+          <span class="coluna-contagem" data-contagem="lancamento">0</span>
+        </div>
+        <div class="coluna-lista" data-lista="lancamento"></div>
+      </section>
+
+      <section class="coluna" data-status="andamento">
+        <div class="coluna-cabecalho">
+          <div class="coluna-titulo">
+            <span class="coluna-ponto"></span>
+            <h2>Andamento</h2>
+          </div>
+          <span class="coluna-contagem" data-contagem="andamento">0</span>
+        </div>
+        <div class="coluna-lista" data-lista="andamento"></div>
+      </section>
+
+      <section class="coluna" data-status="finalizados">
+        <div class="coluna-cabecalho">
+          <div class="coluna-titulo">
+            <span class="coluna-ponto"></span>
+            <h2>Finalizados</h2>
+          </div>
+          <span class="coluna-contagem" data-contagem="finalizados">0</span>
+        </div>
+        <div class="coluna-lista" data-lista="finalizados"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- =========================================================
+       MODAL · NOVA COMANDA
+       ========================================================= -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+      <div class="modal-cabecalho">
+        <h2 id="modalTitulo">Nova Comanda</h2>
+        <button class="modal-fechar" id="btnFecharModalX" type="button" aria-label="Fechar">&times;</button>
+      </div>
+
+      <form id="formComanda" novalidate>
+        <div class="modal-corpo">
+
+          <div class="campo" data-campo="nome">
+            <label for="campoNome">Nome do Pedido <span class="obrigatorio">*</span></label>
+            <input type="text" id="campoNome" name="nome" placeholder="Ex: Maria Silva - Armário Cozinha">
+            <span class="campo-erro">Informe o nome do pedido.</span>
+          </div>
+
+          <div class="campo" data-campo="descricao">
+            <label for="campoDescricao">Descrição <span class="obrigatorio">*</span></label>
+            <textarea id="campoDescricao" name="descricao" placeholder="Ex: 4 prateleiras 60x30cm, MDF branco 15mm, corte reto + furação"></textarea>
+            <span class="campo-erro">Descreva a peça, medidas e tipo de corte.</span>
+          </div>
+
+          <div class="linha-dupla">
+            <div class="campo" data-campo="quantidade">
+              <label for="campoQuantidade">Quantidade <span class="obrigatorio">*</span></label>
+              <input type="number" id="campoQuantidade" name="quantidade" min="1" step="1" placeholder="Ex: 4">
+              <span class="campo-erro">Informe uma quantidade válida.</span>
+            </div>
+
+            <div class="campo" data-campo="prazo">
+              <label for="campoPrazo">Tempo para Entrega <span class="obrigatorio">*</span></label>
+              <input type="text" id="campoPrazo" name="prazo" placeholder="Ex: 3 dias úteis / 20/09">
+              <span class="campo-erro">Informe o prazo de entrega.</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-rodape">
+          <button type="button" class="btn-secundario" id="btnCancelar">Cancelar</button>
+          <button type="submit" class="btn-salvar">Salvar Comanda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast de feedback -->
+  <div class="toast" id="toast">
+    <span class="toast-ponto"></span>
+    <span id="toastTexto">Comanda salva!</span>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     ESTADO
+     ========================================================= */
+  var CHAVE_ARMAZENAMENTO = "chaymdf_pedidos_v1";
+
+  // Dados de exemplo para o MVP já iniciar com contexto visual
+  var pedidosPadrao = [
+    {
+      id: gerarId(),
+      nome: "Marcenaria Horizonte",
+      descricao: "12 portas de armário 45x70cm, MDF branco TX 15mm, corte reto com furação para dobradiça.",
+      quantidade: 12,
+      prazo: "5 dias úteis",
+      status: "lancamento"
+    },
+    {
+      id: gerarId(),
+      nome: "Loja Casa Nova - Balcão",
+      descricao: "Tampo de balcão 180x60cm, MDF freijó 25mm, corte com rebaixo para pia.",
+      quantidade: 1,
+      prazo: "22/09",
+      status: "andamento"
+    },
+    {
+      id: gerarId(),
+      nome: "Cliente João Pereira",
+      descricao: "6 prateleiras 60x30cm, MDF branco 15mm, cantos arredondados.",
+      quantidade: 6,
+      prazo: "Retirada hoje",
+      status: "finalizados"
+    }
+  ];
+
+  var pedidos = carregarPedidos();
+
+  /* =========================================================
+     ELEMENTOS
+     ========================================================= */
+  var board = document.getElementById("board");
+  var listas = {
+    lancamento: document.querySelector('[data-lista="lancamento"]'),
+    andamento: document.querySelector('[data-lista="andamento"]'),
+    finalizados: document.querySelector('[data-lista="finalizados"]')
+  };
+  var contagens = {
+    lancamento: document.querySelector('[data-contagem="lancamento"]'),
+    andamento: document.querySelector('[data-contagem="andamento"]'),
+    finalizados: document.querySelector('[data-contagem="finalizados"]')
+  };
+
+  var modalOverlay = document.getElementById("modalOverlay");
+  var formComanda = document.getElementById("formComanda");
+  var btnNovaComanda = document.getElementById("btnNovaComanda");
+  var btnFecharModalX = document.getElementById("btnFecharModalX");
+  var btnCancelar = document.getElementById("btnCancelar");
+
+  var toast = document.getElementById("toast");
+  var toastTexto = document.getElementById("toastTexto");
+  var toastTimeout = null;
+
+  var mensagensVazio = {
+    lancamento: "Nenhum pedido em lançamento.<br>Clique em \"+ Nova Comanda\" para cadastrar.",
+    andamento: "Arraste um cartão aqui para<br>colocá-lo em produção.",
+    finalizados: "Os pedidos prontos para<br>entrega aparecem aqui."
+  };
+
+  /* =========================================================
+     PERSISTÊNCIA (localStorage)
+     ========================================================= */
+  function carregarPedidos() {
+    try {
+      var salvos = localStorage.getItem(CHAVE_ARMAZENAMENTO);
+      if (salvos) {
+        var lista = JSON.parse(salvos);
+        if (Array.isArray(lista) && lista.length > 0) return lista;
+      }
+    } catch (erro) {
+      console.warn("Não foi possível ler o armazenamento local:", erro);
+    }
+    return pedidosPadrao;
+  }
+
+  function salvarPedidos() {
+    try {
+      localStorage.setItem(CHAVE_ARMAZENAMENTO, JSON.stringify(pedidos));
+    } catch (erro) {
+      console.warn("Não foi possível salvar no armazenamento local:", erro);
+    }
+  }
+
+  function gerarId() {
+    return "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+
+  /* =========================================================
+     RENDERIZAÇÃO DO QUADRO
+     ========================================================= */
+  function renderizarQuadro() {
+    Object.keys(listas).forEach(function (status) {
+      var lista = listas[status];
+      lista.innerHTML = "";
+
+      var pedidosDaColuna = pedidos.filter(function (p) { return p.status === status; });
+      contagens[status].textContent = pedidosDaColuna.length;
+
+      if (pedidosDaColuna.length === 0) {
+        var vazio = document.createElement("div");
+        vazio.className = "coluna-vazia";
+        vazio.innerHTML = mensagensVazio[status];
+        lista.appendChild(vazio);
+        return;
+      }
+
+      pedidosDaColuna.forEach(function (pedido) {
+        lista.appendChild(criarCartao(pedido));
+      });
+    });
+  }
+
+  function criarCartao(pedido) {
+    var cartao = document.createElement("article");
+    cartao.className = "cartao";
+    cartao.draggable = true;
+    cartao.dataset.id = pedido.id;
+    cartao.setAttribute("aria-roledescription", "cartão de pedido arrastável");
+
+    cartao.innerHTML =
+      '<div class="cartao-topo">' +
+        '<span class="cartao-nome"></span>' +
+        '<button class="cartao-remover" type="button" title="Remover pedido" aria-label="Remover pedido">&times;</button>' +
+      '</div>' +
+      '<p class="cartao-descricao"></p>' +
+      '<div class="cartao-rodape">' +
+        '<span class="badge badge-qtd"></span>' +
+        '<span class="badge badge-prazo"></span>' +
+      '</div>';
+
+    // Inserção de texto via textContent (evita problemas de escaping/HTML)
+    cartao.querySelector(".cartao-nome").textContent = pedido.nome;
+    cartao.querySelector(".cartao-descricao").textContent = pedido.descricao;
+    cartao.querySelector(".badge-qtd").textContent = pedido.quantidade + "x peça(s)";
+    cartao.querySelector(".badge-prazo").textContent = pedido.prazo;
+
+    // Remover pedido
+    cartao.querySelector(".cartao-remover").addEventListener("click", function (evento) {
+      evento.stopPropagation();
+      removerPedido(pedido.id);
+    });
+
+    // ---- Drag and Drop (HTML5 API) ----
+    cartao.addEventListener("dragstart", function (evento) {
+      evento.dataTransfer.setData("text/plain", pedido.id);
+      evento.dataTransfer.effectAllowed = "move";
+      // pequeno timeout para o estilo "arrastando" não sumir o cartão antes do navegador tirar o snapshot
+      setTimeout(function () { cartao.classList.add("arrastando"); }, 0);
+    });
+
+    cartao.addEventListener("dragend", function () {
+      cartao.classList.remove("arrastando");
+    });
+
+    return cartao;
+  }
+
+  function removerPedido(id) {
+    pedidos = pedidos.filter(function (p) { return p.id !== id; });
+    salvarPedidos();
+    renderizarQuadro();
+    exibirToast("Pedido removido.");
+  }
+
+  /* =========================================================
+     DRAG AND DROP — COLUNAS (destino)
+     ========================================================= */
+  document.querySelectorAll(".coluna").forEach(function (coluna) {
+    var status = coluna.dataset.status;
+
+    coluna.addEventListener("dragover", function (evento) {
+      evento.preventDefault(); // necessário para permitir o "drop"
+      evento.dataTransfer.dropEffect = "move";
+      coluna.classList.add("drag-over");
+    });
+
+    coluna.addEventListener("dragleave", function (evento) {
+      // só remove o destaque se realmente saiu da coluna (não de um filho interno)
+      if (!coluna.contains(evento.relatedTarget)) {
+        coluna.classList.remove("drag-over");
+      }
+    });
+
+    coluna.addEventListener("drop", function (evento) {
+      evento.preventDefault();
+      coluna.classList.remove("drag-over");
+
+      var id = evento.dataTransfer.getData("text/plain");
+      var pedido = pedidos.find(function (p) { return p.id === id; });
+      if (!pedido) return;
+
+      if (pedido.status !== status) {
+        pedido.status = status;
+        salvarPedidos();
+        renderizarQuadro();
+        exibirToast("Pedido movido para \"" + rotuloStatus(status) + "\".");
+      }
+    });
+  });
+
+  function rotuloStatus(status) {
+    return { lancamento: "Lançamento", andamento: "Andamento", finalizados: "Finalizados" }[status] || status;
+  }
+
+  /* =========================================================
+     MODAL · NOVA COMANDA
+     ========================================================= */
+  function abrirModal() {
+    modalOverlay.classList.add("aberto");
+    document.body.style.overflow = "hidden";
+    limparErrosFormulario();
+    formComanda.reset();
+    setTimeout(function () { document.getElementById("campoNome").focus(); }, 150);
+  }
+
+  function fecharModal() {
+    modalOverlay.classList.remove("aberto");
+    document.body.style.overflow = "";
+  }
+
+  btnNovaComanda.addEventListener("click", abrirModal);
+  btnFecharModalX.addEventListener("click", fecharModal);
+  btnCancelar.addEventListener("click", fecharModal);
+
+  // Fecha ao clicar fora do conteúdo do modal
+  modalOverlay.addEventListener("click", function (evento) {
+    if (evento.target === modalOverlay) fecharModal();
+  });
+
+  // Fecha com a tecla ESC
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key === "Escape" && modalOverlay.classList.contains("aberto")) {
+      fecharModal();
+    }
+  });
+
+  function limparErrosFormulario() {
+    document.querySelectorAll(".campo").forEach(function (campo) {
+      campo.classList.remove("invalido");
+    });
+  }
+
+  /* =========================================================
+     VALIDAÇÃO E SUBMISSÃO DO FORMULÁRIO
+     ========================================================= */
+  formComanda.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    limparErrosFormulario();
+
+    var nome = document.getElementById("campoNome").value.trim();
+    var descricao = document.getElementById("campoDescricao").value.trim();
+    var quantidadeStr = document.getElementById("campoQuantidade").value.trim();
+    var prazo = document.getElementById("campoPrazo").value.trim();
+    var quantidade = parseInt(quantidadeStr, 10);
+
+    var valido = true;
+
+    if (!nome) { marcarInvalido("nome"); valido = false; }
+    if (!descricao) { marcarInvalido("descricao"); valido = false; }
+    if (!quantidadeStr || isNaN(quantidade) || quantidade < 1) { marcarInvalido("quantidade"); valido = false; }
+    if (!prazo) { marcarInvalido("prazo"); valido = false; }
+
+    if (!valido) return;
+
+    var novoPedido = {
+      id: gerarId(),
+      nome: nome,
+      descricao: descricao,
+      quantidade: quantidade,
+      prazo: prazo,
+      status: "lancamento" // toda nova comanda entra em Lançamento
+    };
+
+    pedidos.unshift(novoPedido);
+    salvarPedidos();
+    renderizarQuadro();
+    fecharModal();
+    exibirToast("Comanda \"" + nome + "\" criada em Lançamento.");
+  });
+
+  function marcarInvalido(nomeCampo) {
+    var campo = document.querySelector('[data-campo="' + nomeCampo + '"]');
+    if (campo) campo.classList.add("invalido");
+  }
+
+  /* =========================================================
+     TOAST
+     ========================================================= */
+  function exibirToast(mensagem) {
+    toastTexto.textContent = mensagem;
+    toast.classList.add("visivel");
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(function () {
+      toast.classList.remove("visivel");
+    }, 2600);
+  }
+
+  /* =========================================================
+     INICIALIZAÇÃO
+     ========================================================= */
+  renderizarQuadro();
+
+})();
+</script>
+</body>
+</html>

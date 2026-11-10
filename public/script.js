@@ -2,6 +2,46 @@
   "use strict";
 
   /* =========================================================
+     TEMA (diurno / noturno) — aplicado primeiro para evitar "piscar"
+     ========================================================= */
+  var CHAVE_TEMA = "chaymdf_tema";
+
+  function lerTemaSalvo() {
+    try {
+      return localStorage.getItem(CHAVE_TEMA) === "noturno" ? "noturno" : "diurno";
+    } catch (erro) {
+      return "diurno"; // padrão quando o armazenamento não está disponível
+    }
+  }
+
+  function aplicarTema(tema) {
+    if (tema === "noturno") {
+      document.documentElement.setAttribute("data-tema", "noturno");
+    } else {
+      document.documentElement.removeAttribute("data-tema");
+    }
+    var btnTema = document.getElementById("btnTema");
+    if (btnTema) {
+      btnTema.setAttribute("aria-pressed", tema === "noturno" ? "true" : "false");
+      document.getElementById("btnTemaTexto").textContent =
+        tema === "noturno" ? "Modo diurno" : "Modo noturno";
+    }
+  }
+
+  var temaAtual = lerTemaSalvo();
+  aplicarTema(temaAtual);
+
+  document.getElementById("btnTema").addEventListener("click", function () {
+    temaAtual = temaAtual === "noturno" ? "diurno" : "noturno";
+    aplicarTema(temaAtual);
+    try {
+      localStorage.setItem(CHAVE_TEMA, temaAtual);
+    } catch (erro) {
+      console.warn("Não foi possível salvar o tema:", erro);
+    }
+  });
+
+  /* =========================================================
      ESTADO
      ========================================================= */
   var CHAVE_ARMAZENAMENTO = "chaymdf_pedidos_v1";
@@ -13,7 +53,7 @@
       nome: "Marcenaria Horizonte",
       descricao: "12 portas de armário 45x70cm, MDF branco TX 15mm, corte reto com furação para dobradiça.",
       quantidade: 12,
-      prazo: "5 dias úteis",
+      prazo: "17/11/2026",
       status: "lancamento"
     },
     {
@@ -21,7 +61,7 @@
       nome: "Loja Casa Nova - Balcão",
       descricao: "Tampo de balcão 180x60cm, MDF freijó 25mm, corte com rebaixo para pia.",
       quantidade: 1,
-      prazo: "22/09",
+      prazo: "13/11/2026",
       status: "andamento"
     },
     {
@@ -29,7 +69,7 @@
       nome: "Cliente João Pereira",
       descricao: "6 prateleiras 60x30cm, MDF branco 15mm, cantos arredondados.",
       quantidade: 6,
-      prazo: "Retirada hoje",
+      prazo: "10/11/2026",
       status: "finalizados"
     }
   ];
@@ -268,7 +308,7 @@
     if (!nome) { marcarInvalido("nome"); valido = false; }
     if (!descricao) { marcarInvalido("descricao"); valido = false; }
     if (!quantidadeStr || isNaN(quantidade) || quantidade < 1) { marcarInvalido("quantidade"); valido = false; }
-    if (!prazo) { marcarInvalido("prazo"); valido = false; }
+    if (!dataValida(prazo)) { marcarInvalido("prazo"); valido = false; }
 
     if (!valido) return;
 
@@ -291,6 +331,50 @@
   function marcarInvalido(nomeCampo) {
     var campo = document.querySelector('[data-campo="' + nomeCampo + '"]');
     if (campo) campo.classList.add("invalido");
+  }
+
+  /* =========================================================
+     MÁSCARA DE DATA · DD/MM/AAAA
+     ========================================================= */
+  var campoPrazo = document.getElementById("campoPrazo");
+
+  // Bloqueia letras e símbolos já na digitação (as barras são automáticas)
+  campoPrazo.addEventListener("beforeinput", function (evento) {
+    if (evento.data && /\D/.test(evento.data) && evento.inputType !== "insertFromPaste") {
+      evento.preventDefault();
+    }
+  });
+
+  // Reformata a cada alteração (digitação, colar, apagar)
+  campoPrazo.addEventListener("input", function () {
+    campoPrazo.value = formatarData(campoPrazo.value);
+  });
+
+  function formatarData(texto) {
+    var numeros = texto.replace(/\D/g, "").slice(0, 8); // só dígitos, no máximo 8
+    if (numeros.length > 4) {
+      return numeros.slice(0, 2) + "/" + numeros.slice(2, 4) + "/" + numeros.slice(4);
+    }
+    if (numeros.length > 2) {
+      return numeros.slice(0, 2) + "/" + numeros.slice(2);
+    }
+    return numeros;
+  }
+
+  // Confere o formato e se a data existe no calendário (ex.: 31/02 é inválido)
+  function dataValida(texto) {
+    var partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
+    if (!partes) return false;
+
+    var dia = parseInt(partes[1], 10);
+    var mes = parseInt(partes[2], 10);
+    var ano = parseInt(partes[3], 10);
+    if (ano < 1900) return false;
+
+    var data = new Date(ano, mes - 1, dia);
+    return data.getFullYear() === ano &&
+           data.getMonth() === mes - 1 &&
+           data.getDate() === dia;
   }
 
   /* =========================================================

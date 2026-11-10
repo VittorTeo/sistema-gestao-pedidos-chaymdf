@@ -15,8 +15,8 @@
     <div class="marca">
       <div class="marca-icone">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 4H20V20H4V4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M4 12H20M12 4V20" stroke="white" stroke-width="1.8"/>
+          <path d="M4 4H20V20H4V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M4 12H20M12 4V20" stroke="currentColor" stroke-width="1.8"/>
         </svg>
       </div>
       <div class="marca-textos">
@@ -24,12 +24,26 @@
         <p>Corte e peças em MDF · painel de produção</p>
       </div>
     </div>
-    <button class="btn-primario" id="btnNovaComanda" type="button">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 5V19M5 12H19" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-      </svg>
-      Nova Comanda
-    </button>
+    <div class="header-acoes">
+      <!-- Botão de alternância de tema (diurno / noturno) -->
+      <button class="btn-tema" id="btnTema" type="button" aria-pressed="false" title="Alternar tema">
+        <svg class="icone-lua" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        <svg class="icone-sol" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2.5V5M12 19V21.5M2.5 12H5M19 12H21.5M5.3 5.3L7 7M17 17L18.7 18.7M5.3 18.7L7 17M17 7L18.7 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="btn-tema-texto" id="btnTemaTexto">Modo noturno</span>
+      </button>
+
+      <button class="btn-primario" id="btnNovaComanda" type="button">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        Nova Comanda
+      </button>
+    </div>
   </header>
 
   <!-- =========================================================
@@ -108,8 +122,8 @@
 
             <div class="campo" data-campo="prazo">
               <label for="campoPrazo">Tempo para Entrega <span class="obrigatorio">*</span></label>
-              <input type="text" id="campoPrazo" name="prazo" placeholder="Ex: 3 dias úteis / 20/09">
-              <span class="campo-erro">Informe o prazo de entrega.</span>
+              <input type="text" id="campoPrazo" name="prazo" placeholder="DD/MM/AAAA" inputmode="numeric" maxlength="10" autocomplete="off">
+              <span class="campo-erro">Informe uma data válida (DD/MM/AAAA).</span>
             </div>
           </div>
 

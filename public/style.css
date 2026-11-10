@@ -176,21 +176,26 @@ textarea:focus-visible,
 .marca {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.marca-icone {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: var(--cor-destaque);
-  color: var(--cor-destaque-texto);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Logo oficial: altura fixa, largura proporcional (não distorce) */
+.marca-logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
   flex-shrink: 0;
+  display: block;
+  border-radius: 10px;                      /* o JPG tem fundo preto: vira um "selo" */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
-.marca-icone svg { width: 24px; height: 24px; }
+
+/* Linha fina separando a logo do título */
+.marca-textos {
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  padding-left: 14px;
+}
 
 .marca-textos h1 {
   font-size: 1.15rem;
@@ -624,6 +629,7 @@ textarea:focus-visible,
 
 @media (max-width: 520px) {
   .btn-tema .btn-tema-texto { display: none; }
+  .marca-logo { height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

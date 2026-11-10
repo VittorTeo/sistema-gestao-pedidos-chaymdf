@@ -23,8 +23,14 @@ O **Sistema de Gestão de Pedidos ChayMDF** é uma aplicação web leve e intera
 ## ⚙️ Como Executar o Projeto
 Por se tratar de uma aplicação web otimizada para os computadores básicos da empresa (sem necessidade de servidores complexos), sua execução é direta:
 1. Faça o download ou clone este repositório em sua máquina.
-2. Certifique-se de ter o arquivo `index.html` na pasta principal.
-3. Dê um duplo clique no arquivo `index.html` para abri-lo em qualquer navegador web moderno (Google Chrome, Microsoft Edge, etc.).
+2. Abra a pasta `public/`, que contém a aplicação:
+   ```
+   public/
+   ├── index.html      # estrutura e marcação
+   ├── style.css       # estilos
+   └── script.js       # lógica (quadro Kanban, modal, drag and drop, localStorage)
+   ```
+3. Dê um duplo clique no arquivo `public/index.html` para abri-lo em qualquer navegador web moderno (Google Chrome, Microsoft Edge, etc.).
 
 ## 👨‍💻 Autoria e Orientação
 - **Estudante / Desenvolvedor:** Vittor Hugo Oliveira Teodoro

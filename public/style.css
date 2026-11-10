@@ -186,9 +186,8 @@ textarea:focus-visible,
   object-fit: contain;
   flex-shrink: 0;
   display: block;
-  border-radius: 10px;                      /* o JPG tem fundo preto: vira um "selo" */
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border-radius: 50%;                       /* logo circular */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 2px 8px rgba(0, 0, 0, 0.35); /* aro sutil */
 }
 
 /* Linha fina separando a logo do título */

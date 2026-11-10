@@ -53,7 +53,7 @@
       nome: "Marcenaria Horizonte",
       descricao: "12 portas de armário 45x70cm, MDF branco TX 15mm, corte reto com furação para dobradiça.",
       quantidade: 12,
-      prazo: "17/11/2026",
+      prazo: "17/11/2026 17:00",
       status: "lancamento"
     },
     {
@@ -61,7 +61,7 @@
       nome: "Loja Casa Nova - Balcão",
       descricao: "Tampo de balcão 180x60cm, MDF freijó 25mm, corte com rebaixo para pia.",
       quantidade: 1,
-      prazo: "13/11/2026",
+      prazo: "13/11/2026 14:30",
       status: "andamento"
     },
     {
@@ -69,7 +69,7 @@
       nome: "Cliente João Pereira",
       descricao: "6 prateleiras 60x30cm, MDF branco 15mm, cantos arredondados.",
       quantidade: 6,
-      prazo: "10/11/2026",
+      prazo: "10/11/2026 18:00",
       status: "finalizados"
     }
   ];
@@ -350,26 +350,29 @@
     campoPrazo.value = formatarData(campoPrazo.value);
   });
 
+  // Monta "DD/MM/AAAA HH:MM" a partir de até 12 dígitos
   function formatarData(texto) {
-    var numeros = texto.replace(/\D/g, "").slice(0, 8); // só dígitos, no máximo 8
-    if (numeros.length > 4) {
-      return numeros.slice(0, 2) + "/" + numeros.slice(2, 4) + "/" + numeros.slice(4);
-    }
-    if (numeros.length > 2) {
-      return numeros.slice(0, 2) + "/" + numeros.slice(2);
-    }
-    return numeros;
+    var n = texto.replace(/\D/g, "").slice(0, 12); // só dígitos, no máximo 12
+    var resultado = n.slice(0, 2);
+    if (n.length > 2)  resultado += "/" + n.slice(2, 4);   // mês
+    if (n.length > 4)  resultado += "/" + n.slice(4, 8);   // ano
+    if (n.length > 8)  resultado += " " + n.slice(8, 10);  // hora
+    if (n.length > 10) resultado += ":" + n.slice(10, 12); // minutos
+    return resultado;
   }
 
-  // Confere o formato e se a data existe no calendário (ex.: 31/02 é inválido)
+  // Confere o formato, se a data existe no calendário (ex.: 31/02 é inválido)
+  // e se a hora está entre 00:00 e 23:59
   function dataValida(texto) {
-    var partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
+    var partes = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/.exec(texto);
     if (!partes) return false;
 
     var dia = parseInt(partes[1], 10);
     var mes = parseInt(partes[2], 10);
     var ano = parseInt(partes[3], 10);
-    if (ano < 1900) return false;
+    var hora = parseInt(partes[4], 10);
+    var minuto = parseInt(partes[5], 10);
+    if (ano < 1900 || hora > 23 || minuto > 59) return false;
 
     var data = new Date(ano, mes - 1, dia);
     return data.getFullYear() === ano &&

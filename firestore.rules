@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Regras do Cloud Firestore · Sistema de Gestão de Pedidos ChayMDF
+//
+// ATENÇÃO: o sistema ainda não tem login, então qualquer pessoa com o
+// link do site pode ler, criar, mover e remover pedidos. Estas regras
+// apenas garantem que os dados gravados tenham o formato correto.
+// Próximo passo recomendado: Firebase Authentication + "request.auth != null".
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function statusValido(s) {
+      return s in ['lancamento', 'andamento', 'finalizados'];
+    }
+
+    function pedidoValido(d) {
+      return d.keys().hasOnly(['nome', 'descricao', 'quantidade', 'prazo', 'status', 'criadoEm'])
+        && d.keys().hasAll(['nome', 'descricao', 'quantidade', 'prazo', 'status', 'criadoEm'])
+        && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 200
+        && d.descricao is string && d.descricao.size() > 0 && d.descricao.size() <= 2000
+        && d.quantidade is int && d.quantidade >= 1 && d.quantidade <= 100000
+        && d.prazo is string && d.prazo.matches('^[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}$')
+        && statusValido(d.status);
+    }
+
+    match /pedidos/{pedidoId} {
+      allow read: if true;
+
+      // Novo pedido: formato válido, sempre em "lancamento", data do servidor
+      allow create: if pedidoValido(request.resource.data)
+        && request.resource.data.status == 'lancamento'
+        && request.resource.data.criadoEm == request.time;
+
+      // Mover entre colunas: só o campo "status" pode mudar
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && statusValido(request.resource.data.status);
+
+      allow delete: if true;
+    }
+
+    // Qualquer outra coleção fica bloqueada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

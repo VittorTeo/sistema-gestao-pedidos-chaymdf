@@ -100,13 +100,13 @@
 
           <div class="campo" data-campo="nome">
             <label for="campoNome">Nome do Pedido <span class="obrigatorio">*</span></label>
-            <input type="text" id="campoNome" name="nome" placeholder="Ex: Maria Silva - Armário Cozinha">
+            <input type="text" id="campoNome" name="nome" maxlength="200" placeholder="Ex: Maria Silva - Armário Cozinha">
             <span class="campo-erro">Informe o nome do pedido.</span>
           </div>
 
           <div class="campo" data-campo="descricao">
             <label for="campoDescricao">Descrição <span class="obrigatorio">*</span></label>
-            <textarea id="campoDescricao" name="descricao" placeholder="Ex: 4 prateleiras 60x30cm, MDF branco 15mm, corte reto + furação"></textarea>
+            <textarea id="campoDescricao" name="descricao" maxlength="2000" placeholder="Ex: 4 prateleiras 60x30cm, MDF branco 15mm, corte reto + furação"></textarea>
             <span class="campo-erro">Descreva a peça, medidas e tipo de corte.</span>
           </div>
 
@@ -140,6 +140,10 @@
     <span id="toastTexto">Comanda salva!</span>
   </div>
 
+<!-- Firebase (SDK compat: funciona como script comum, inclusive abrindo o arquivo direto) -->
+<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

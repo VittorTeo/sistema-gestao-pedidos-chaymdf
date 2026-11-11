@@ -44,37 +44,9 @@
   /* =========================================================
      ESTADO
      ========================================================= */
-  var CHAVE_ARMAZENAMENTO = "chaymdf_pedidos_v1";
-
-  // Dados de exemplo para o MVP já iniciar com contexto visual
-  var pedidosPadrao = [
-    {
-      id: gerarId(),
-      nome: "Marcenaria Horizonte",
-      descricao: "12 portas de armário 45x70cm, MDF branco TX 15mm, corte reto com furação para dobradiça.",
-      quantidade: 12,
-      prazo: "17/11/2026 17:00",
-      status: "lancamento"
-    },
-    {
-      id: gerarId(),
-      nome: "Loja Casa Nova - Balcão",
-      descricao: "Tampo de balcão 180x60cm, MDF freijó 25mm, corte com rebaixo para pia.",
-      quantidade: 1,
-      prazo: "13/11/2026 14:30",
-      status: "andamento"
-    },
-    {
-      id: gerarId(),
-      nome: "Cliente João Pereira",
-      descricao: "6 prateleiras 60x30cm, MDF branco 15mm, cantos arredondados.",
-      quantidade: 6,
-      prazo: "10/11/2026 18:00",
-      status: "finalizados"
-    }
-  ];
-
-  var pedidos = carregarPedidos();
+  var pedidos = [];                 // preenchido em tempo real pelo Firestore
+  var estadoConexao = "carregando"; // "carregando" | "ok" | "erro"
+  var colecaoPedidos = null;        // referência à coleção "pedidos" no Firestore
 
   /* =========================================================
      ELEMENTOS
@@ -108,31 +80,59 @@
   };
 
   /* =========================================================
-     PERSISTÊNCIA (localStorage)
+     PERSISTÊNCIA · CLOUD FIRESTORE
+     Coleção "pedidos": cada documento é um pedido com
+     { nome, descricao, quantidade, prazo, status, criadoEm }
      ========================================================= */
-  function carregarPedidos() {
-    try {
-      var salvos = localStorage.getItem(CHAVE_ARMAZENAMENTO);
-      if (salvos) {
-        var lista = JSON.parse(salvos);
-        if (Array.isArray(lista) && lista.length > 0) return lista;
-      }
-    } catch (erro) {
-      console.warn("Não foi possível ler o armazenamento local:", erro);
+  function iniciarFirestore() {
+    if (typeof firebase === "undefined" || !window.FIREBASE_CONFIG) {
+      falhaConexao("SDK do Firebase ou firebase-config.js não carregou.");
+      return;
     }
-    return pedidosPadrao;
+
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    colecaoPedidos = firebase.firestore().collection("pedidos");
+
+    // Escuta em tempo real: roda agora e a cada mudança feita por QUALQUER usuário
+    colecaoPedidos.onSnapshot(function (snapshot) {
+      pedidos = snapshot.docs.map(function (doc) {
+        // "estimate": enquanto o servidor não confirma a data, usa a hora local
+        var dados = doc.data({ serverTimestamps: "estimate" });
+        return {
+          id: doc.id,
+          nome: dados.nome,
+          descricao: dados.descricao,
+          quantidade: dados.quantidade,
+          prazo: dados.prazo,
+          status: dados.status,
+          criadoEm: dados.criadoEm ? dados.criadoEm.toMillis() : 0
+        };
+      });
+      // Mais recentes primeiro
+      pedidos.sort(function (a, b) { return b.criadoEm - a.criadoEm; });
+
+      estadoConexao = "ok";
+      renderizarQuadro();
+    }, function (erro) {
+      falhaConexao(erro);
+    });
   }
 
-  function salvarPedidos() {
-    try {
-      localStorage.setItem(CHAVE_ARMAZENAMENTO, JSON.stringify(pedidos));
-    } catch (erro) {
-      console.warn("Não foi possível salvar no armazenamento local:", erro);
-    }
+  function falhaConexao(erro) {
+    console.error("Erro no Firestore:", erro);
+    estadoConexao = "erro";
+    renderizarQuadro();
+    exibirToast(mensagemDeErro(erro));
   }
 
-  function gerarId() {
-    return "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  function mensagemDeErro(erro) {
+    if (erro && erro.code === "permission-denied") {
+      return "Sem permissão no banco de dados (verifique as regras do Firestore).";
+    }
+    if (erro && erro.code === "unavailable") {
+      return "Sem conexão com o banco de dados. Verifique a internet.";
+    }
+    return "Não foi possível acessar o banco de dados.";
   }
 
   /* =========================================================
@@ -142,6 +142,18 @@
     Object.keys(listas).forEach(function (status) {
       var lista = listas[status];
       lista.innerHTML = "";
+
+      // Enquanto carrega (ou se falhar), mostra um aviso em vez dos cartões
+      if (estadoConexao !== "ok") {
+        contagens[status].textContent = "–";
+        var aviso = document.createElement("div");
+        aviso.className = "coluna-vazia";
+        aviso.textContent = estadoConexao === "carregando"
+          ? "Carregando pedidos..."
+          : "Não foi possível carregar os pedidos.";
+        lista.appendChild(aviso);
+        return;
+      }
 
       var pedidosDaColuna = pedidos.filter(function (p) { return p.status === status; });
       contagens[status].textContent = pedidosDaColuna.length;
@@ -187,7 +199,7 @@
     // Remover pedido
     cartao.querySelector(".cartao-remover").addEventListener("click", function (evento) {
       evento.stopPropagation();
-      removerPedido(pedido.id);
+      removerPedido(pedido);
     });
 
     // ---- Drag and Drop (HTML5 API) ----
@@ -205,11 +217,17 @@
     return cartao;
   }
 
-  function removerPedido(id) {
-    pedidos = pedidos.filter(function (p) { return p.id !== id; });
-    salvarPedidos();
-    renderizarQuadro();
-    exibirToast("Pedido removido.");
+  function removerPedido(pedido) {
+    // O banco é compartilhado: confirma antes de apagar para todos
+    if (!window.confirm("Remover o pedido \"" + pedido.nome + "\"? Esta ação não pode ser desfeita.")) return;
+
+    colecaoPedidos.doc(pedido.id).delete()
+      .then(function () { exibirToast("Pedido removido."); })
+      .catch(function (erro) {
+        console.error("Erro ao remover:", erro);
+        exibirToast(mensagemDeErro(erro));
+      });
+    // O quadro se atualiza sozinho pelo onSnapshot
   }
 
   /* =========================================================
@@ -240,9 +258,11 @@
       if (!pedido) return;
 
       if (pedido.status !== status) {
-        pedido.status = status;
-        salvarPedidos();
-        renderizarQuadro();
+        colecaoPedidos.doc(id).update({ status: status })
+          .catch(function (erro) {
+            console.error("Erro ao mover:", erro);
+            exibirToast(mensagemDeErro(erro));
+          });
         exibirToast("Pedido movido para \"" + rotuloStatus(status) + "\".");
       }
     });
@@ -312,18 +332,24 @@
 
     if (!valido) return;
 
-    var novoPedido = {
-      id: gerarId(),
+    if (!colecaoPedidos) {
+      exibirToast("Sem conexão com o banco de dados.");
+      return;
+    }
+
+    colecaoPedidos.add({
       nome: nome,
       descricao: descricao,
       quantidade: quantidade,
       prazo: prazo,
-      status: "lancamento" // toda nova comanda entra em Lançamento
-    };
+      status: "lancamento", // toda nova comanda entra em Lançamento
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function (erro) {
+      console.error("Erro ao salvar:", erro);
+      exibirToast(mensagemDeErro(erro));
+    });
 
-    pedidos.unshift(novoPedido);
-    salvarPedidos();
-    renderizarQuadro();
+    // O Firestore mostra o cartão na hora (antes mesmo da confirmação do servidor)
     fecharModal();
     exibirToast("Comanda \"" + nome + "\" criada em Lançamento.");
   });
@@ -395,6 +421,7 @@
   /* =========================================================
      INICIALIZAÇÃO
      ========================================================= */
-  renderizarQuadro();
+  renderizarQuadro();  // mostra "Carregando pedidos..."
+  iniciarFirestore();  // conecta e passa a escutar a coleção "pedidos"
 
 })();

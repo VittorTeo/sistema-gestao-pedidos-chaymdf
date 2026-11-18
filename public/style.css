@@ -619,6 +619,66 @@ textarea:focus-visible,
 }
 
 /* =========================================================
+   LOGIN DE FUNCIONÁRIOS
+   ========================================================= */
+/* Garante que o atributo "hidden" vence regras de display */
+[hidden] { display: none !important; }
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150; /* acima do header e do modal */
+  background: var(--cor-fundo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-cartao {
+  width: 100%;
+  max-width: 380px;
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-top: 4px solid var(--cor-destaque);
+  border-radius: 14px;
+  box-shadow: var(--sombra-modal);
+  padding: 28px 26px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  align-self: center;
+}
+
+.login-cartao h2 {
+  text-align: center;
+  font-size: 1.15rem;
+  color: var(--cor-texto-forte);
+}
+
+.login-subtitulo {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--cor-texto-secundario);
+  margin-top: -6px;
+}
+
+.login-erro {
+  min-height: 1.1em;
+  font-size: 0.8rem;
+  color: var(--cor-perigo);
+}
+
+.login-botao { width: 100%; padding: 12px; }
+.login-botao:disabled { opacity: 0.6; cursor: wait; }
+
+/* =========================================================
    RESPONSIVO
    ========================================================= */
 @media (max-width: 880px) {

@@ -40,6 +40,14 @@
         </svg>
         Nova Comanda
       </button>
+
+      <!-- Sair (aparece só depois do login) -->
+      <button class="btn-tema" id="btnSair" type="button" title="Sair" hidden>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M15 4H19V20H15M10 8L6 12L10 16M6 12H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="btn-tema-texto">Sair</span>
+      </button>
     </div>
   </header>
 
@@ -140,8 +148,34 @@
     <span id="toastTexto">Comanda salva!</span>
   </div>
 
+  <!-- =========================================================
+       LOGIN DE FUNCIONÁRIOS
+       ========================================================= -->
+  <div class="login-overlay" id="telaLogin" hidden>
+    <form class="login-cartao" id="formLogin" novalidate>
+      <img class="login-logo" src="logo-chaymdf.png" alt="" width="72" height="72">
+      <h2>Acesso restrito</h2>
+      <p class="login-subtitulo">Entre com o e-mail e a senha de funcionário.</p>
+
+      <div class="campo">
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" name="email" autocomplete="username" maxlength="200">
+      </div>
+
+      <div class="campo">
+        <label for="loginSenha">Senha</label>
+        <input type="password" id="loginSenha" name="senha" autocomplete="current-password" maxlength="200">
+      </div>
+
+      <p class="login-erro" id="loginErro" role="alert"></p>
+
+      <button type="submit" class="btn-salvar login-botao" id="btnEntrar">Entrar</button>
+    </form>
+  </div>
+
 <!-- Firebase (SDK compat: funciona como script comum, inclusive abrindo o arquivo direto) -->
 <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="script.js"></script>

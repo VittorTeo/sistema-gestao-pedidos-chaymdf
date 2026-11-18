@@ -2,12 +2,18 @@ rules_version = '2';
 
 // Regras do Cloud Firestore · Sistema de Gestão de Pedidos ChayMDF
 //
-// ATENÇÃO: o sistema ainda não tem login, então qualquer pessoa com o
-// link do site pode ler, criar, mover e remover pedidos. Estas regras
-// apenas garantem que os dados gravados tenham o formato correto.
-// Próximo passo recomendado: Firebase Authentication + "request.auth != null".
+// Acesso restrito a funcionários: a pessoa precisa estar logada
+// (Firebase Authentication, e-mail/senha) E ter um documento em
+// /funcionarios/{UID} — criado pelo administrador no console.
+// Para tirar o acesso de alguém: apague o documento dela em
+// "funcionarios" ou desative o usuário no Authentication.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function ehFuncionario() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/funcionarios/$(request.auth.uid));
+    }
 
     function statusValido(s) {
       return s in ['lancamento', 'andamento', 'finalizados'];
@@ -24,18 +30,25 @@ service cloud.firestore {
     }
 
     match /pedidos/{pedidoId} {
-      allow read: if true;
+      allow read: if ehFuncionario();
 
       // Novo pedido: formato válido, sempre em "lancamento", data do servidor
-      allow create: if pedidoValido(request.resource.data)
+      allow create: if ehFuncionario()
+        && pedidoValido(request.resource.data)
         && request.resource.data.status == 'lancamento'
         && request.resource.data.criadoEm == request.time;
 
       // Mover entre colunas: só o campo "status" pode mudar
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+      allow update: if ehFuncionario()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && statusValido(request.resource.data.status);
 
-      allow delete: if true;
+      allow delete: if ehFuncionario();
+    }
+
+    // Lista de funcionários: administrada só pelo console do Firebase
+    match /funcionarios/{uid} {
+      allow read, write: if false;
     }
 
     // Qualquer outra coleção fica bloqueada

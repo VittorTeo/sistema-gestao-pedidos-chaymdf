@@ -4,9 +4,9 @@
   /* =========================================================
      CONFIGURAÇÕES DE SEGURANÇA
      ========================================================= */
-  // S2 · Login de funcionários. Deixe "false" até criar os usuários no
-  // Firebase Authentication; depois mude para "true" e faça o deploy.
-  var EXIGIR_LOGIN = false;
+  // S2 · Login de funcionários (Firebase Authentication, e-mail/senha).
+  // Com "true", o quadro só carrega depois que um funcionário entra.
+  var EXIGIR_LOGIN = true;
 
   // S6 · Remove pedidos que versões antigas do sistema guardavam no
   // navegador (dados de clientes sem criptografia).
@@ -58,6 +58,8 @@
   var pedidos = [];                 // preenchido em tempo real pelo Firestore
   var estadoConexao = "carregando"; // "carregando" | "ok" | "erro"
   var colecaoPedidos = null;        // referência à coleção "pedidos" no Firestore
+  var pararEscuta = null;           // encerra o onSnapshot (usado ao sair)
+  var STATUS_VALIDOS = ["lancamento", "andamento", "finalizados"];
 
   /* =========================================================
      ELEMENTOS
@@ -95,30 +97,40 @@
      Coleção "pedidos": cada documento é um pedido com
      { nome, descricao, quantidade, prazo, status, criadoEm }
      ========================================================= */
-  function iniciarFirestore() {
+  function iniciarApp() {
     if (typeof firebase === "undefined" || !window.FIREBASE_CONFIG) {
       falhaConexao("SDK do Firebase ou firebase-config.js não carregou.");
       return;
     }
 
     firebase.initializeApp(window.FIREBASE_CONFIG);
+
+    if (!EXIGIR_LOGIN) {
+      iniciarFirestore();
+      return;
+    }
+
+    // S2 · Só conecta ao banco depois que o funcionário entrar.
+    // O Firebase lembra o login: quem já entrou não precisa digitar de novo.
+    firebase.auth().onAuthStateChanged(function (usuario) {
+      if (usuario) {
+        esconderLogin(usuario);
+        iniciarFirestore();
+      } else {
+        pararFirestore();
+        mostrarLogin();
+      }
+    });
+  }
+
+  function iniciarFirestore() {
+    if (pararEscuta) return; // já conectado
     colecaoPedidos = firebase.firestore().collection("pedidos");
 
     // Escuta em tempo real: roda agora e a cada mudança feita por QUALQUER usuário
-    colecaoPedidos.onSnapshot(function (snapshot) {
-      pedidos = snapshot.docs.map(function (doc) {
-        // "estimate": enquanto o servidor não confirma a data, usa a hora local
-        var dados = doc.data({ serverTimestamps: "estimate" });
-        return {
-          id: doc.id,
-          nome: dados.nome,
-          descricao: dados.descricao,
-          quantidade: dados.quantidade,
-          prazo: dados.prazo,
-          status: dados.status,
-          criadoEm: dados.criadoEm ? dados.criadoEm.toMillis() : 0
-        };
-      });
+    pararEscuta = colecaoPedidos.onSnapshot(function (snapshot) {
+      // S3 · Documentos fora do formato são ignorados em vez de travar o quadro
+      pedidos = snapshot.docs.map(normalizarPedido).filter(Boolean);
       // Mais recentes primeiro
       pedidos.sort(function (a, b) { return b.criadoEm - a.criadoEm; });
 
@@ -127,6 +139,37 @@
     }, function (erro) {
       falhaConexao(erro);
     });
+  }
+
+  function pararFirestore() {
+    if (pararEscuta) pararEscuta();
+    pararEscuta = null;
+    colecaoPedidos = null;
+    pedidos = [];
+    estadoConexao = "carregando";
+    renderizarQuadro();
+  }
+
+  // S3 · Nunca confia no formato do que vem do banco
+  function normalizarPedido(doc) {
+    // "estimate": enquanto o servidor não confirma a data, usa a hora local
+    var d = doc.data({ serverTimestamps: "estimate" }) || {};
+
+    if (typeof d.nome !== "string" || typeof d.prazo !== "string" ||
+        STATUS_VALIDOS.indexOf(d.status) === -1) {
+      console.warn("Pedido ignorado (formato inválido):", doc.id);
+      return null;
+    }
+
+    return {
+      id: doc.id,
+      nome: d.nome,
+      descricao: typeof d.descricao === "string" ? d.descricao : "",
+      quantidade: Number.isInteger(d.quantidade) ? d.quantidade : 0,
+      prazo: d.prazo,
+      status: d.status,
+      criadoEm: (d.criadoEm && typeof d.criadoEm.toMillis === "function") ? d.criadoEm.toMillis() : 0
+    };
   }
 
   function falhaConexao(erro) {
@@ -138,7 +181,9 @@
 
   function mensagemDeErro(erro) {
     if (erro && erro.code === "permission-denied") {
-      return "Sem permissão no banco de dados (verifique as regras do Firestore).";
+      return EXIGIR_LOGIN
+        ? "Seu usuário não tem permissão. Peça ao administrador para cadastrá-lo como funcionário."
+        : "Sem permissão no banco de dados (verifique as regras do Firestore).";
     }
     if (erro && erro.code === "unavailable") {
       return "Sem conexão com o banco de dados. Verifique a internet.";
@@ -418,6 +463,78 @@
   }
 
   /* =========================================================
+     LOGIN DE FUNCIONÁRIOS (S2)
+     ========================================================= */
+  var telaLogin = document.getElementById("telaLogin");
+  var formLogin = document.getElementById("formLogin");
+  var loginErro = document.getElementById("loginErro");
+  var btnEntrar = document.getElementById("btnEntrar");
+  var btnSair = document.getElementById("btnSair");
+
+  function mostrarLogin() {
+    fecharModal();
+    telaLogin.hidden = false;
+    btnSair.hidden = true;
+    loginErro.textContent = "";
+    setTimeout(function () { document.getElementById("loginEmail").focus(); }, 50);
+  }
+
+  function esconderLogin(usuario) {
+    telaLogin.hidden = true;
+    btnSair.hidden = false;
+    btnSair.title = "Sair (" + (usuario.email || "funcionário") + ")";
+    formLogin.reset();
+  }
+
+  formLogin.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    var email = document.getElementById("loginEmail").value.trim();
+    var senha = document.getElementById("loginSenha").value;
+    if (!email || !senha) {
+      loginErro.textContent = "Informe e-mail e senha.";
+      return;
+    }
+
+    btnEntrar.disabled = true;
+    btnEntrar.textContent = "Entrando...";
+    loginErro.textContent = "";
+
+    // Se der certo, o onAuthStateChanged esconde a tela e carrega o quadro
+    firebase.auth().signInWithEmailAndPassword(email, senha)
+      .catch(function (erro) {
+        loginErro.textContent = mensagemErroLogin(erro);
+      })
+      .then(function () {
+        btnEntrar.disabled = false;
+        btnEntrar.textContent = "Entrar";
+      });
+  });
+
+  btnSair.addEventListener("click", function () {
+    firebase.auth().signOut();
+  });
+
+  function mensagemErroLogin(erro) {
+    switch (erro && erro.code) {
+      case "auth/invalid-credential":
+      case "auth/invalid-login-credentials":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+      case "auth/invalid-email":
+        return "E-mail ou senha incorretos.";
+      case "auth/user-disabled":
+        return "Este usuário foi desativado.";
+      case "auth/too-many-requests":
+        return "Muitas tentativas. Aguarde alguns minutos e tente de novo.";
+      case "auth/network-request-failed":
+        return "Sem conexão. Verifique a internet.";
+      default:
+        console.error("Erro no login:", erro);
+        return "Não foi possível entrar. Tente novamente.";
+    }
+  }
+
+  /* =========================================================
      TOAST
      ========================================================= */
   function exibirToast(mensagem) {
@@ -433,6 +550,6 @@
      INICIALIZAÇÃO
      ========================================================= */
   renderizarQuadro();  // mostra "Carregando pedidos..."
-  iniciarFirestore();  // conecta e passa a escutar a coleção "pedidos"
+  iniciarApp();        // inicia o Firebase, pede login e conecta ao banco
 
 })();

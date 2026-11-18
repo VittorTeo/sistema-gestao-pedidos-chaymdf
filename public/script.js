@@ -58,6 +58,7 @@
   var pedidos = [];                 // preenchido em tempo real pelo Firestore
   var estadoConexao = "carregando"; // "carregando" | "ok" | "erro"
   var colecaoPedidos = null;        // referência à coleção "pedidos" no Firestore
+  var STATUS_VALIDOS = ["lancamento", "andamento", "finalizados"];
 
   /* =========================================================
      ELEMENTOS
@@ -106,19 +107,8 @@
 
     // Escuta em tempo real: roda agora e a cada mudança feita por QUALQUER usuário
     colecaoPedidos.onSnapshot(function (snapshot) {
-      pedidos = snapshot.docs.map(function (doc) {
-        // "estimate": enquanto o servidor não confirma a data, usa a hora local
-        var dados = doc.data({ serverTimestamps: "estimate" });
-        return {
-          id: doc.id,
-          nome: dados.nome,
-          descricao: dados.descricao,
-          quantidade: dados.quantidade,
-          prazo: dados.prazo,
-          status: dados.status,
-          criadoEm: dados.criadoEm ? dados.criadoEm.toMillis() : 0
-        };
-      });
+      // S3 · Documentos fora do formato são ignorados em vez de travar o quadro
+      pedidos = snapshot.docs.map(normalizarPedido).filter(Boolean);
       // Mais recentes primeiro
       pedidos.sort(function (a, b) { return b.criadoEm - a.criadoEm; });
 
@@ -127,6 +117,28 @@
     }, function (erro) {
       falhaConexao(erro);
     });
+  }
+
+  // S3 · Nunca confia no formato do que vem do banco
+  function normalizarPedido(doc) {
+    // "estimate": enquanto o servidor não confirma a data, usa a hora local
+    var d = doc.data({ serverTimestamps: "estimate" }) || {};
+
+    if (typeof d.nome !== "string" || typeof d.prazo !== "string" ||
+        STATUS_VALIDOS.indexOf(d.status) === -1) {
+      console.warn("Pedido ignorado (formato inválido):", doc.id);
+      return null;
+    }
+
+    return {
+      id: doc.id,
+      nome: d.nome,
+      descricao: typeof d.descricao === "string" ? d.descricao : "",
+      quantidade: Number.isInteger(d.quantidade) ? d.quantidade : 0,
+      prazo: d.prazo,
+      status: d.status,
+      criadoEm: (d.criadoEm && typeof d.criadoEm.toMillis === "function") ? d.criadoEm.toMillis() : 0
+    };
   }
 
   function falhaConexao(erro) {

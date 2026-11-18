@@ -2,6 +2,17 @@
   "use strict";
 
   /* =========================================================
+     CONFIGURAÇÕES DE SEGURANÇA
+     ========================================================= */
+  // S2 · Login de funcionários. Deixe "false" até criar os usuários no
+  // Firebase Authentication; depois mude para "true" e faça o deploy.
+  var EXIGIR_LOGIN = false;
+
+  // S6 · Remove pedidos que versões antigas do sistema guardavam no
+  // navegador (dados de clientes sem criptografia).
+  try { localStorage.removeItem("chaymdf_pedidos_v1"); } catch (erro) { /* armazenamento indisponível */ }
+
+  /* =========================================================
      TEMA (diurno / noturno) — aplicado primeiro para evitar "piscar"
      ========================================================= */
   var CHAVE_TEMA = "chaymdf_tema";
